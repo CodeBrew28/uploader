@@ -4,13 +4,23 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "micro ."
+    "start": "micro .",
+    "format": "prettier --write '**/*.{js,css,md}'"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "authenticate": "CodeBrew28/authenticate",
+    "aws-sdk": "^2.245.1",
+    "fs": "^0.0.1-security",
     "micro": "^9.3.1",
     "mongoose": "^5.1.2",
-    "schemas": "CodeBrew28/schemas"
+    "node-uuid": "^1.4.8",
+    "s3-streaming-upload": "^0.2.3",
+    "schemas": "CodeBrew28/schemas",
+    "zlib": "^1.0.5"
+  },
+  "devDependencies": {
+    "prettier": "1.12.1"
   }
 }

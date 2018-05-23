@@ -1,55 +1,70 @@
-const {send} = require('micro')
-const mongoose = require('mongoose')
-const { Files } = require('schemas')(mongoose)
-const encode = value => encodeURIComponent(value).replace(/^%40/, '@');
+const { promisify } = require('util');
+const { send } = require('micro');
+const uuid = require('node-uuid');
+const mongoose = require('mongoose');
+var fs = require('fs');
+var zlib = require('zlib');
+const AWS = require('aws-sdk');
+const { Files } = require('schemas')(mongoose);
+const authenticate = require('authenticate')(mongoose)
 
-mongoose.connect("mongodb://aria:malkani@ds231070.mlab.com:31070/file-system")
-mongoose.Promise = global.Promise
+console.log(process.env.AWS_SECRET_ACCESS_KEY);
 
-module.exports = async (req, res) => {
-    const urlParams = req.url.split('/')
-    if (urlParams[1] === "favicon.ico") {
-        const statusCode = 400
-    const data = { error: 'Custom error message' }
+// const s3 = new AWS.S3({
+//     params: { Bucket: 'git-for-env-files' }
+//   })
 
-    send(res, statusCode, data)
-    return
-        
-    }
+//
 
-    const spec = {
-		full: encode(mongoose)
-	};
+// MONGO_URL=mongodb://root:t70VE%253vlzNS2u@ds151558.mlab.com:51558/mechmania
+// AWS_SECRET_ACCESS_KEY=4IRESGNpDMrLn/fiZ4akHkVYNqzvtrHuVIcRT07Y
+// AWS_ACCESS_KEY_ID=AKIAJYS3A4NHESJAGEAQ
 
-    console.log('file')
-    console.log(spec)
-    console.log('file')
+AWS.config.update({
+  accessKeyId: 'AKIAJYS3A4NHESJAGEAQ',
+  secretAccessKey: '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',
+  region: 'us-east-1',
+});
 
-    // const name = 'hello';
-    // const file = await Files.findOne({name}).exec()
+const s3 = new AWS.S3({
+  params: { Bucket: 'git-for-env-files' },
+});
 
-    // const script = new Files({
-    //     name: "test4"
-    //   })
-    //   await script.save()
-      const name = 'test4'
-    //   const file = await Files.findOne({name}).exec()
+//
 
-      try {
-        const script = new Files({
-            name: "test4"
-          })
-          await script.save()
-      } catch (error) {
-        console.error(error);
-      }
-      const file = await Files.findOne({name}).exec()
+const upload = promisify(s3.upload.bind(s3));
 
-    console.log(file)
-    console.log("hi");
+mongoose.connect(process.env.MONGO_URL);
+mongoose.Promise = global.Promise;
 
-    const statusCode = 200
-    const data = { error: 'Success' }
+module.exports = authenticate( async (req, res) => {
+  const urlParams = req.url.split('/');
+  if (urlParams[1] === 'favicon.ico') {
+    const statusCode = 400;
+    const data = { error: 'Custom error message' };
+    send(res, statusCode, data);
+    return;
+  }
 
-    send(res, statusCode, data)
-}
+  const name = 'test4';
+  var body = fs.createReadStream('test.js');
+  const scriptName = uuid.v4();
+  const key = 'files/' + scriptName;
+  var options = { partSize: 10 * 1024 * 1024, queueSize: 1 };
+  const data = await upload(
+    {
+      Key: key,
+      Body: body,
+    },
+    options
+  );
+
+  console.log('finished upload');
+
+  await s3.getObject({Key: key}).createReadStream().pipe(process.stdout);
+  // const file = await Files.findOne({ name }).exec();
+  const statusCode = 200;
+  const data2 = { message: 'Success' };
+
+  send(res, statusCode, data2);
+});
